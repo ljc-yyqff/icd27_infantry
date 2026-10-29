@@ -1,0 +1,16 @@
+[Unit]
+Description=SP Vision Safe Debug Headless
+After=local-fs.target
+
+[Service]
+Type=simple
+User=ros
+WorkingDirectory=/home/ros/步兵/同济大学SuperPower战队25赛季自瞄算法开源/sp_vision_25-main
+Environment=SAFE_DEBUG_HEADLESS=true
+Environment=SAFE_DEBUG_MODE=yolo
+ExecStart=/home/ros/步兵/同济大学SuperPower战队25赛季自瞄算法开源/sp_vision_25-main/safe_debug_start.sh
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

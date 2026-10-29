@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--GalaxyView version： 3.0.2306.8201-->
+<root>
+	<entry>
+		<feature_name>TitleEnglish</feature_name>
+        <simplified_Chinese>GalaxyView</simplified_Chinese>
+    </entry>
+
+	<entry>
+		<feature_name>TitleSimplifiedChinese</feature_name>
+        <simplified_Chinese>GalaxyView</simplified_Chinese>
+    </entry>    
+    
+	<entry>
+		<feature_name>IniFileName</feature_name>
+        <simplified_Chinese>GalaxyView.ini</simplified_Chinese>
+    </entry>  
+</root>

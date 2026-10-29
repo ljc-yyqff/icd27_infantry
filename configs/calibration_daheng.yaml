@@ -1,0 +1,24 @@
+pattern_cols: 10
+pattern_rows: 7
+center_distance_mm: 27
+
+R_gimbal2imubody: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+
+camera_name: "daheng"
+exposure_ms: 24
+gain: 15.0
+white_balance_auto: "Continuous"
+swap_rb: true
+rotate_180: true
+com_port: "/dev/gimbal"
+baudrate: 115200
+
+# 3088x2064 原始内参按 180° 画面旋转后的像素坐标系同步换算。
+camera_matrix: [2493.8093629470959, 0, 1528.1888096222829, 0, 2493.4350742530842, 951.1380332621368, 0, 0, 1]
+distort_coeffs: [-0.070545088343562434, 0.10490865143132844, 0.0010693998768263142, -0.00050128827408037224, 0]
+
+#####-----cboard参数-----#####
+quaternion_canid: 0x100
+bullet_speed_canid: 0x101
+send_canid: 0xff
+can_interface: "can0"

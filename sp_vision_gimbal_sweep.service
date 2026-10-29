@@ -1,0 +1,16 @@
+[Unit]
+Description=SP Vision one-shot gimbal sweep
+Wants=sp_vision_safe_debug.service
+After=sp_vision_safe_debug.service
+
+[Service]
+Type=oneshot
+User=ros
+WorkingDirectory=/home/ros/步兵/同济大学SuperPower战队25赛季自瞄算法开源/sp_vision_25-main
+ExecStart=/home/ros/步兵/同济大学SuperPower战队25赛季自瞄算法开源/sp_vision_25-main/build/gimbal1_autorun configs/gimbal1.yaml
+RemainAfterExit=yes
+TimeoutStartSec=120
+TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target

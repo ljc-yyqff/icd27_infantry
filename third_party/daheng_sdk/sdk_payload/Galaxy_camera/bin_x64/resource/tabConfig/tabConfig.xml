@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!--GalaxyView version： 3.0.2308.8021-->
+<root>
+    <defaultTab>0</defaultTab>
+    <customTab>
+        <index>1</index>
+        <tabName_cn>常用属性</tabName_cn>
+        <tabName_en>Common</tabName_en>
+        <items>
+            <featureName>Width</featureName>
+            <featureName>Height</featureName>
+            <featureName>OffsetX</featureName>
+            <featureName>OffsetY</featureName>
+            <featureName>DrawROI</featureName>
+            <featureName>PixelFormat</featureName>
+			<featureName>DrawAAROI</featureName>
+            <featureName>ExposureMode</featureName>
+            <featureName>ExposureTime</featureName>
+            <featureName>ExposureAuto</featureName>
+            <featureName>Gain</featureName>
+            <featureName>GainAuto</featureName>
+            <featureName>AcquisitionFrameRate</featureName>
+            <featureName>CurrentAcquisitionFrameRate</featureName>
+        </items>
+    </customTab>
+    <customTab>
+        <index>2</index>
+        <tabName_cn>触发IO</tabName_cn>
+        <tabName_en>Trigger</tabName_en>
+        <items>
+            <featureName>TriggerMode</featureName>
+            <featureName>TriggerSource</featureName>
+            <featureName>TriggerSoftware</featureName>
+            <featureName>TriggerActivation</featureName>
+            <featureName>TriggerDelay</featureName>
+            <featureName>LineSelector</featureName>
+            <featureName>LineMode</featureName>
+			<featureName>LineSource</featureName>
+			<featureName>UserOutputSelector</featureName>
+			<featureName>UserOutputValue</featureName>
+        </items>
+    </customTab>
+	<customTab>
+        <index>3</index>
+        <tabName_cn>图像属性</tabName_cn>
+        <tabName_en>Image</tabName_en>
+        <items>
+            <featureName>GammaEnable</featureName>
+            <featureName>GammaMode</featureName>
+            <featureName>Gamma</featureName>
+            <featureName>SharpnessMode</featureName>
+            <featureName>Sharpness</featureName>
+            <featureName>BalanceRatioSelector</featureName>
+            <featureName>BalanceRatio</featureName>
+			<featureName>BalanceWhiteAuto</featureName>
+			<featureName>SaturationMode</featureName>
+			<featureName>Saturation</featureName>
+        </items>
+    </customTab>
+
+</root>
