@@ -11,6 +11,7 @@ add_library(auto_aim OBJECT
     classifier.cpp 
     detector.cpp
     solver.cpp
+    single_armor_tracking.cpp
     aimer.cpp
     target.cpp
     tracker.cpp

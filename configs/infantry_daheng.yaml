@@ -56,7 +56,7 @@ exposure_ms: 10.0
 gain: 12
 white_balance_auto: "Once"
 swap_rb: true
-rotate_180: true
+rotate_180: false
 vid_pid: "2bdf:0001"
 
 #  1  0  0
@@ -64,9 +64,9 @@ vid_pid: "2bdf:0001"
 #  0  0  1
 R_gimbal2imubody: [1, 0, 0, 0, 1, 0, 0, 0, 1]
 
-# 原始标定重投影误差: 0.2375px。下列参数已换算到 3088x2064 画面旋转 180° 后的像素坐标系。
-camera_matrix: [2493.8093629470959, 0, 1528.1888096222829, 0, 2493.4350742530842, 951.1380332621368, 0, 0, 1]
-distort_coeffs: [-0.070545088343562434, 0.10490865143132844, 0.0010693998768263142, -0.00050128827408037224, 0]
+# 原始标定重投影误差: 0.2375px。当前输出原始正向画面（3088x2064），内参及切向畸变已同步还原。
+camera_matrix: [2493.8093629470959, 0, 1558.8111903777171, 0, 2493.4350742530842, 1111.8619667378632, 0, 0, 1]
+distort_coeffs: [-0.070545088343562434, 0.10490865143132844, -0.0010693998768263142, 0.00050128827408037224, 0]
 
 # 相机同理想情况的偏角: yaw1.44 pitch-7.28 roll0.96 degree
 # 标定板到世界坐标系原点的水平距离: 1.13 m
@@ -88,11 +88,11 @@ serial_reconnect_error_count: 50
 serial_offline_timeout_ms: 100 # 超时未收到A板合法反馈时，NUC强制停止控制和开火
 # gimbal1 visual tracking: maximum angle allowed for one relative yr/pr command.
 gimbal1_max_relative_angle_deg: 10.0
-gimbal1_max_speed_deg_s: 30.0
-yaw_kp: 0
-yaw_kd: 0
-pitch_kp: 0
-pitch_kd: 0
+gimbal1_max_speed_deg_s: 60.0
+# yaw_kp: 0
+# yaw_kd: 0
+# pitch_kp: 0
+# pitch_kd: 0
 
 #####-----planner-----#####
 fire_thresh: 0.0035
@@ -111,3 +111,33 @@ model: "assets/yolo11_buff_int8.xml"
 #####-----buff_aimer参数-----#####
 fire_gap_time: 0.700   # s
 predict_time: 0.120     # s
+
+# New ASCII firmware: 9-column telemetry at 50 Hz; #GM status and #GC receipts.
+gimbal1_yaw_direction: -1
+gimbal1_pitch_direction: -1
+
+# Single held armor: two-axis IMU compensation + original PnP/EKF + target velocity feedforward.
+# Host receive/dequeue timestamps are not hardware timestamps. Positive latencies are subtracted.
+gimbal1_tracking:
+  command_rate_cap_hz: 25.0 # reserve telemetry slots: #GC replies replace feedback in current firmware
+  imu_yaw_sign: 1.0
+  imu_pitch_sign: -1.0 # x-forward/y-left/z-up rotation; verify on fixed-base bench
+  imu_latency_ms: 0.0 # unknown until measured
+  camera_latency_ms: 0.0 # unknown until measured; includes dequeue vs exposure offset
+  pose_max_gap_ms: 80.0
+  pose_extrapolate_ms: 50.0
+  additional_prediction_ms: 0.0 # extra actuator/transport delay, NOT a measured value
+  max_prediction_ms: 150.0
+  max_reprojection_px: 4.0 # floor; also allow a bounded fraction of lightbar image height
+  max_reprojection_fraction: 0.04
+  max_reprojection_absolute_px: 20.0
+  max_lead_deg: 2.0
+  max_feedforward_deg_s: 30.0
+  feedforward_velocity_tau_ms: 50.0 # smooth only the model feedforward, never delay the pixel base
+  max_range_m: 30.0
+  acceleration_sigma_m_s2: 20.0
+  measurement_sigma_xy_m: 0.001
+  measurement_sigma_depth_m: 0.06
+  min_motion_samples: 5
+  feedforward_gain: 0.8
+  feedforward_deadband_deg_s: 0.5

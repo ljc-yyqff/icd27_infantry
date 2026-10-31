@@ -81,9 +81,9 @@ Eigen::VectorXd ExtendedKalmanFilter::update(
   double recent_rate = static_cast<double>(recent_failures) / recent_nis_failures.size();
 
   data["residual_yaw"] = residual[0];
-  data["residual_pitch"] = residual[1];
-  data["residual_distance"] = residual[2];
-  data["residual_angle"] = residual[3];
+  data["residual_pitch"] = residual.size() > 1 ? residual[1] : 0;
+  data["residual_distance"] = residual.size() > 2 ? residual[2] : 0;
+  data["residual_angle"] = residual.size() > 3 ? residual[3] : 0;
   data["nis"] = nis;
   data["nees"] = nees;
   data["recent_nis_failures"] = recent_rate;

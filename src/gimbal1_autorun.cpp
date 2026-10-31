@@ -27,7 +27,7 @@ struct SweepConfig
   double yaw_half_range_deg = 90.0;
   double pitch_min_deg = 5.0;
   double pitch_center_deg = 25.0;
-  double pitch_max_deg = 45.0;
+  double pitch_max_deg = 40.0;
   double enable_settle_s = 0.5;
   double step_settle_s = 0.1;
   double final_hold_s = 10.0;
@@ -82,12 +82,13 @@ SweepConfig load_sweep_config(const std::string & config_path)
       })) {
     throw std::runtime_error("all gimbal1_sweep values must be finite");
   }
-  if (config.speed_deg_s <= 0.0 || config.step_deg <= 0.0 || config.step_deg > 5.0 ||
+  if (config.speed_deg_s < 1.0 || config.speed_deg_s > 120.0 || config.step_deg <= 0.0 || config.step_deg > 5.0 ||
       config.yaw_half_range_deg <= 0.0) {
     throw std::runtime_error(
       "speed and yaw range must be positive; step_deg must be in (0, 5]");
   }
-  if (!(config.pitch_min_deg < config.pitch_center_deg &&
+  if (config.pitch_min_deg < -100 || config.pitch_max_deg > 41 ||
+      !(config.pitch_min_deg < config.pitch_center_deg &&
         config.pitch_center_deg < config.pitch_max_deg)) {
     throw std::runtime_error("pitch must satisfy min < center < max");
   }
@@ -102,12 +103,12 @@ SweepConfig load_sweep_config(const std::string & config_path)
 std::vector<Segment> make_segments(const SweepConfig & config)
 {
   return {
-    {Axis::YAW, config.yaw_half_range_deg, "yaw center -> right"},
-    {Axis::YAW, -2.0 * config.yaw_half_range_deg, "yaw right -> left"},
-    {Axis::YAW, config.yaw_half_range_deg, "yaw left -> center"},
-    {Axis::PITCH, config.pitch_max_deg - config.pitch_center_deg, "pitch center -> 45 deg"},
-    {Axis::PITCH, config.pitch_min_deg - config.pitch_max_deg, "pitch 45 -> 5 deg"},
-    {Axis::PITCH, config.pitch_center_deg - config.pitch_min_deg, "pitch 5 -> center"}};
+    {Axis::YAW, config.yaw_half_range_deg, "yaw center -> left (+)"},
+    {Axis::YAW, -2.0 * config.yaw_half_range_deg, "yaw left -> right"},
+    {Axis::YAW, config.yaw_half_range_deg, "yaw right -> center"},
+    {Axis::PITCH, config.pitch_max_deg - config.pitch_center_deg, "pitch center -> upper bound"},
+    {Axis::PITCH, config.pitch_min_deg - config.pitch_max_deg, "pitch upper -> lower bound"},
+    {Axis::PITCH, config.pitch_center_deg - config.pitch_min_deg, "pitch lower -> center"}};
 }
 
 bool wait_interruptible(double seconds, bool dry_run)
@@ -123,6 +124,18 @@ bool wait_interruptible(double seconds, bool dry_run)
       std::chrono::duration_cast<std::chrono::steady_clock::duration>(
         std::chrono::milliseconds(100));
     std::this_thread::sleep_for(std::min(remaining, poll_interval));
+  }
+  return !stop_requested;
+}
+
+bool wait_with_feedback(double seconds, io::Gimbal1 * gimbal, bool dry_run)
+{
+  if (dry_run) return !stop_requested;
+  const auto start = std::chrono::steady_clock::now();
+  while (!stop_requested && std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count() < seconds) {
+    io::Gimbal1Feedback feedback;
+    gimbal->poll_feedback(feedback);
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
   return !stop_requested;
 }
@@ -173,7 +186,7 @@ bool run_relative_segment(
     }
 
     remaining -= step;
-    if (!wait_interruptible(magnitude / config.speed_deg_s + config.step_settle_s, dry_run)) {
+    if (!wait_with_feedback(magnitude / config.speed_deg_s + config.step_settle_s, gimbal, dry_run)) {
       return false;
     }
   }
@@ -204,7 +217,7 @@ int main(int argc, char * argv[])
 
     std::cout << "[gimbal1-autorun] TX ge\\r\\n\n";
     if (!dry_run) gimbal->enable();
-    if (!wait_interruptible(config.enable_settle_s, dry_run)) return 130;
+    if (!wait_with_feedback(config.enable_settle_s, gimbal.get(), dry_run)) return 130;
 
     for (const auto & segment : segments) {
       if (!run_relative_segment(gimbal.get(), segment, config, dry_run)) return 130;
@@ -212,7 +225,7 @@ int main(int argc, char * argv[])
 
     std::cout << "[gimbal1-autorun] motion complete; holding for " << config.final_hold_s
               << " seconds\n";
-    if (!wait_interruptible(config.final_hold_s, dry_run)) return 130;
+    if (!wait_with_feedback(config.final_hold_s, gimbal.get(), dry_run)) return 130;
 
     std::cout << "[gimbal1-autorun] TX gd\\r\\n\n";
     if (!dry_run) gimbal->disable();

@@ -85,9 +85,20 @@ add_executable(minimum_vision_system tests/minimum_vision_system.cpp)
 add_executable(gimbal_protocol_test tests/gimbal_protocol_test.cpp)
 add_executable(gimbal1_test tests/gimbal1_test.cpp)
 add_executable(gimbal1_protocol_test tests/gimbal1_protocol_test.cpp)
+add_executable(gimbal1_pose_samples_test tests/gimbal1_pose_samples_test.cpp)
+target_link_libraries(gimbal1_pose_samples_test PRIVATE gimbal1)
 add_executable(gimbal1_feedback tests/gimbal1_feedback.cpp)
 add_executable(gimbal1_feedback_monitor tests/gimbal1_feedback_monitor.cpp)
 add_executable(gimbal1_armor_track tests/gimbal1_armor_track.cpp)
+find_package(Threads REQUIRED)
+add_executable(gimbal1_signal_stop_test tests/gimbal1_signal_stop_test.cpp tools/exiter.cpp)
+target_link_libraries(gimbal1_signal_stop_test PRIVATE gimbal1 Threads::Threads)
+add_executable(single_armor_replay tests/single_armor_replay.cpp)
+target_link_libraries(single_armor_replay PRIVATE ${OpenCV_LIBS} fmt::fmt yaml-cpp tools auto_aim io)
+add_executable(single_armor_tracking_test tests/single_armor_tracking_test.cpp)
+target_link_libraries(single_armor_tracking_test PRIVATE ${OpenCV_LIBS} fmt::fmt yaml-cpp tools auto_aim io)
+add_executable(visual_tracking_test tests/visual_tracking_test.cpp)
+target_link_libraries(visual_tracking_test PRIVATE Threads::Threads)
 
 target_link_libraries(auto_aim_test ${OpenCV_LIBS} fmt::fmt yaml-cpp tools io auto_aim)
 target_link_libraries(auto_buff_test ${OpenCV_LIBS} fmt::fmt yaml-cpp auto_buff tools io)
@@ -147,3 +158,26 @@ if(ament_cmake_FOUND AND rclcpp_FOUND AND std_msgs_FOUND AND rosidl_typesupport_
 else()
     message(STATUS "ROS2 environment not found, skipping ROS2-related code.")
 endif()
+
+# Hardware-free protocol tests. The integration test opens only a pseudo-terminal.
+include(CTest)
+if(BUILD_TESTING)
+  add_test(NAME gimbal1_protocol COMMAND gimbal1_protocol_test)
+  add_test(NAME gimbal1_pose_samples COMMAND gimbal1_pose_samples_test)
+  add_test(NAME visual_tracking COMMAND visual_tracking_test)
+  add_test(NAME single_armor_tracking COMMAND single_armor_tracking_test "${PROJECT_SOURCE_DIR}/configs/infantry_daheng.yaml")
+  find_package(Python3 QUIET COMPONENTS Interpreter)
+  if(Python3_Interpreter_FOUND)
+    add_test(NAME gimbal1_signal_stop
+      COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/gimbal1_signal_stop_integration.py"
+              "$<TARGET_FILE:gimbal1_signal_stop_test>")
+    set_tests_properties(gimbal1_signal_stop PROPERTIES TIMEOUT 30)
+    add_test(NAME gimbal1_serial_integration
+      COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/gimbal1_serial_integration.py"
+              "$<TARGET_FILE_DIR:gimbal1_test>")
+    set_tests_properties(gimbal1_serial_integration PROPERTIES TIMEOUT 90)
+  endif()
+endif()
+
+add_executable(gimbal1_enable_test tests/gimbal1_enable_test.cpp)
+target_link_libraries(gimbal1_enable_test PRIVATE gimbal1)

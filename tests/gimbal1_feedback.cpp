@@ -1,9 +1,13 @@
 #include "io/gimbal1/gimbal1.hpp"
+#include "gimbal1_console.hpp"
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <iomanip>
+#include <filesystem>
+#include <ctime>
+#include <unistd.h>
 #include <iostream>
 #include <limits>
 #include <sstream>
@@ -22,9 +26,11 @@ void print_help()
     "  yaw | y <angle> <speed>    send relative yaw command yr\n"
     "  pitch | p <angle> <speed>  send relative pitch command pr\n"
     "  feedback | f               show actual yaw/pitch for one second\n"
+    "  status                     show axis state, age and raw status replies\n"
     "  help | h                   show this help\n"
     "  quit | q                   disable the gimbal and exit\n"
-    "Feedback output contains only actual yaw and actual pitch in degrees.\n";
+    "Feedback: actual angles, planner cmd, torque, tx interval (diagnostics only).\n"
+    "Full RX/TX diagnostics are written to the printed log path.\n";
 }
 
 void require_no_extra_input(std::istringstream & input)
@@ -55,6 +61,7 @@ void show_actual_angles(io::Gimbal1 & gimbal, std::chrono::milliseconds duration
   double last_pitch = std::numeric_limits<double>::quiet_NaN();
   size_t valid_count = 0;
   size_t rejected_count = 0;
+  auto last_print = std::chrono::steady_clock::time_point{};
 
   while (std::chrono::steady_clock::now() < deadline) {
     try {
@@ -64,10 +71,17 @@ void show_actual_angles(io::Gimbal1 & gimbal, std::chrono::milliseconds duration
         const bool changed = !std::isfinite(last_yaw) ||
                              std::abs(feedback.yaw_actual_deg - last_yaw) >= 0.001 ||
                              std::abs(feedback.pitch_actual_deg - last_pitch) >= 0.001;
-        if (changed) {
+        if (changed || std::chrono::steady_clock::now() - last_print >= std::chrono::milliseconds(200)) {
           std::cout << std::fixed << std::setprecision(3)
                     << "[feedback] yaw_actual=" << feedback.yaw_actual_deg
-                    << " pitch_actual=" << feedback.pitch_actual_deg << '\n';
+                    << " pitch_actual=" << feedback.pitch_actual_deg
+                    << " yaw_cmd=" << feedback.yaw_setpoint_deg
+                    << " pitch_cmd=" << feedback.pitch_setpoint_deg
+                    << " yaw_torque=" << feedback.yaw_torque_nm
+                    << " pitch_torque=" << feedback.pitch_torque_nm
+                    << " tx_dt_ms=" << feedback.tx_dt_ms
+                    << " ge_requested=" << gimbal.enabled() << '\n';
+          last_print = std::chrono::steady_clock::now();
           last_yaw = feedback.yaw_actual_deg;
           last_pitch = feedback.pitch_actual_deg;
         }
@@ -79,7 +93,7 @@ void show_actual_angles(io::Gimbal1 & gimbal, std::chrono::milliseconds duration
   }
 
   if (valid_count == 0) {
-    std::cerr << "[feedback] no valid 26-field CSV received in this observation window.\n";
+    std::cerr << "[feedback] no valid 9-field CSV received in this observation window.\n";
   }
   if (rejected_count > 0) {
     std::cerr << "[feedback] ignored " << rejected_count << " malformed CSV line(s).\n";
@@ -93,6 +107,11 @@ int main(int argc, char * argv[])
 
   try {
     io::Gimbal1 gimbal(config_path);
+    const auto directory = std::filesystem::absolute("logs/gimbal1");
+    std::filesystem::create_directories(directory);
+    const auto log_path = directory / ("feedback_" + std::to_string(std::time(nullptr)) + "_" + std::to_string(getpid()) + ".log");
+    gimbal.start_logging(log_path.string());
+    std::cout << "[log] full timestamped serial trace: " << log_path.string() << '\n';
     std::cout << "gimbal1 feedback opened " << gimbal.port() << " at " << gimbal.baudrate()
               << " baud (8N1). It starts DISABLED.\n";
     print_help();
@@ -101,7 +120,7 @@ int main(int argc, char * argv[])
     show_actual_angles(gimbal, std::chrono::milliseconds(300));
 
     std::string line;
-    while (std::cout << "gimbal1_feedback> " && std::getline(std::cin, line)) {
+    while (std::cout << "gimbal1_feedback> " << std::flush && gimbal1_read_command(gimbal, line)) {
       std::istringstream input(line);
       std::string command;
       if (!(input >> command)) continue;
@@ -110,7 +129,7 @@ int main(int argc, char * argv[])
         if (command == "enable" || command == "e") {
           require_no_extra_input(input);
           gimbal.enable();
-          std::cout << "sent: ge\\r\\n (enabled)\n";
+          std::cout << "ge sent; motor readiness is handled by A-board\n";
           show_actual_angles(gimbal, std::chrono::milliseconds(500));
         } else if (command == "disable" || command == "d") {
           require_no_extra_input(input);
@@ -133,6 +152,11 @@ int main(int argc, char * argv[])
         } else if (command == "feedback" || command == "f") {
           require_no_extra_input(input);
           show_actual_angles(gimbal, std::chrono::seconds(1));
+        } else if (command == "status") {
+          require_no_extra_input(input);
+          io::Gimbal1Feedback feedback;
+          gimbal.poll_feedback(feedback);
+          std::cout << gimbal.status_text() << '\n';
         } else if (command == "help" || command == "h") {
           require_no_extra_input(input);
           print_help();
@@ -149,7 +173,7 @@ int main(int argc, char * argv[])
       }
     }
 
-    std::cout << "\nInput closed; gd\\r\\n will be sent before closing the port.\n";
+    std::cout << "\nInput closed; closing serial only (no automatic gd).\n";
   } catch (const std::exception & e) {
     std::cerr << "gimbal1 feedback startup failed: " << e.what() << '\n';
     return 1;

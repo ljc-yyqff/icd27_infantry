@@ -36,7 +36,7 @@ private:
   std::thread daemon_thread_;
   std::atomic<bool> quit_;
   std::atomic<bool> ok_;
-  tools::ThreadSafeQueue<CameraData> queue_;
+  tools::ThreadSafeQueue<CameraData, true> queue_;
 
   void open();
   void try_open();

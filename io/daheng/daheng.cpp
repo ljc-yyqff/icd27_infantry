@@ -34,7 +34,14 @@ Daheng::Daheng(double exposure_ms, double gain, const std::string & white_balanc
     throw std::runtime_error("GXInitLib failed!");
   }
 
-  try_open();
+  // Startup must fail visibly rather than leave the caller waiting forever for a frame.
+  try {
+    open();
+  } catch (...) {
+    close();
+    GXCloseLib();
+    throw;
+  }
 
   daemon_thread_ = std::thread{[this] {
     tools::logger()->info("Daheng's daemon thread started.");
@@ -67,7 +74,10 @@ Daheng::~Daheng()
 void Daheng::read(cv::Mat & img, std::chrono::steady_clock::time_point & timestamp)
 {
   CameraData data;
-  queue_.pop(data);
+  if (!queue_.pop_for(data, 2s)) {
+    throw std::runtime_error(
+      "Daheng: no camera frame for 2 seconds; check USB connection and camera ownership");
+  }
 
   img = data.img;
   timestamp = data.timestamp;
@@ -88,7 +98,13 @@ void Daheng::open()
   status = GXOpenDeviceByIndex(1, &handle_);
   if (status != GX_STATUS_SUCCESS) {
     handle_ = nullptr;
-    throw std::runtime_error("GXOpenDeviceByIndex failed!");
+    char error_text[1024] = {};
+    size_t error_size = sizeof(error_text);
+    GX_STATUS error_code = status;
+    GXGetLastError(&error_code, error_text, &error_size);
+    throw std::runtime_error(
+      "GXOpenDeviceByIndex failed (status=" + std::to_string(status) + "): " + error_text +
+      "; check whether another camera program/service is using the device");
   }
 
   GXSetAcqusitionBufferNumber(handle_, 5);

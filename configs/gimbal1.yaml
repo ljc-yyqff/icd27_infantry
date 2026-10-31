@@ -7,16 +7,20 @@ serial_timeout_ms: 20
 gimbal1_max_relative_angle_deg: 15.0
 gimbal1_max_speed_deg_s: 30.0
 
-# One-shot boot sweep. All movement commands remain relative. The pitch scan
-# therefore assumes the A-board target is at 25 degrees when ge is accepted.
+# One-shot relative sweep: actual starting pitch must be within 0.2 deg of center.
 gimbal1_sweep:
   speed_deg_s: 10.0
   step_deg: 5.0
   yaw_half_range_deg: 90.0
   pitch_min_deg: 5.0
   pitch_center_deg: 25.0
-  pitch_max_deg: 45.0
+  pitch_max_deg: 40.0
   enable_settle_s: 0.5
   step_settle_s: 0.1
   final_hold_s: 10.0
   serial_wait_s: 30.0
+
+# New ASCII firmware: 9-column telemetry at 50 Hz; #GM status and #GC receipts.
+gimbal1_yaw_direction: -1
+gimbal1_pitch_direction: -1
+serial_offline_timeout_ms: 100

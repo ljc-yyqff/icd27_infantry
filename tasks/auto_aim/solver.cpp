@@ -3,6 +3,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <vector>
+#include <limits>
 
 #include "tools/logger.hpp"
 #include "tools/math_tools.hpp"
@@ -31,12 +32,16 @@ Solver::Solver(const std::string & config_path) : R_gimbal2world_(Eigen::Matrix3
   auto R_gimbal2imubody_data = yaml["R_gimbal2imubody"].as<std::vector<double>>();
   auto R_camera2gimbal_data = yaml["R_camera2gimbal"].as<std::vector<double>>();
   auto t_camera2gimbal_data = yaml["t_camera2gimbal"].as<std::vector<double>>();
+  if (R_gimbal2imubody_data.size()!=9 || R_camera2gimbal_data.size()!=9 || t_camera2gimbal_data.size()!=3)
+    throw std::invalid_argument("Solver: invalid extrinsic calibration dimensions");
   R_gimbal2imubody_ = Eigen::Matrix<double, 3, 3, Eigen::RowMajor>(R_gimbal2imubody_data.data());
   R_camera2gimbal_ = Eigen::Matrix<double, 3, 3, Eigen::RowMajor>(R_camera2gimbal_data.data());
   t_camera2gimbal_ = Eigen::Matrix<double, 3, 1>(t_camera2gimbal_data.data());
 
   auto camera_matrix_data = yaml["camera_matrix"].as<std::vector<double>>();
   auto distort_coeffs_data = yaml["distort_coeffs"].as<std::vector<double>>();
+  if (camera_matrix_data.size()!=9 || distort_coeffs_data.size()!=5)
+    throw std::invalid_argument("Solver: invalid camera calibration dimensions");
   Eigen::Matrix<double, 3, 3, Eigen::RowMajor> camera_matrix(camera_matrix_data.data());
   Eigen::Matrix<double, 1, 5> distort_coeffs(distort_coeffs_data.data());
   cv::eigen2cv(camera_matrix, camera_matrix_);
@@ -85,6 +90,33 @@ void Solver::solve(Armor & armor) const
   if (is_balance) return;
 
   optimize_yaw(armor);
+}
+
+bool Solver::solve_position(Armor & armor, double & reprojection_error) const
+{
+  reprojection_error = std::numeric_limits<double>::infinity();
+  if (armor.points.size() != 4 || !cv::isContourConvex(armor.points) ||
+      std::abs(cv::contourArea(armor.points)) < 4) return false;
+  for (const auto & p : armor.points)
+    if (!std::isfinite(p.x) || !std::isfinite(p.y)) return false;
+  const auto & object_points = armor.type == ArmorType::big ? BIG_ARMOR_POINTS : SMALL_ARMOR_POINTS;
+  cv::Vec3d rvec, tvec;
+  try {
+    if (!cv::solvePnP(object_points, armor.points, camera_matrix_, distort_coeffs_,
+                      rvec, tvec, false, cv::SOLVEPNP_IPPE) ||
+        !cv::checkRange(rvec) || !cv::checkRange(tvec) || tvec[2] <= 0) return false;
+    std::vector<cv::Point2f> projected;
+    cv::projectPoints(object_points, rvec, tvec, camera_matrix_, distort_coeffs_, projected);
+    double squared = 0;
+    for (size_t i = 0; i < projected.size(); ++i) {
+      const auto d = projected[i] - armor.points[i];
+      squared += d.dot(d);
+    }
+    reprojection_error = std::sqrt(squared / projected.size());
+    armor.xyz_in_gimbal = R_camera2gimbal_ * Eigen::Vector3d(tvec[0],tvec[1],tvec[2]) + t_camera2gimbal_;
+    armor.xyz_in_world = R_gimbal2world_ * armor.xyz_in_gimbal;
+    return std::isfinite(reprojection_error) && armor.xyz_in_world.allFinite();
+  } catch (const cv::Exception &) { return false; }
 }
 
 std::vector<cv::Point2f> Solver::reproject_armor(

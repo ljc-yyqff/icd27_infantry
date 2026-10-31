@@ -1,4 +1,5 @@
 #include "io/gimbal1/gimbal1.hpp"
+#include "gimbal1_console.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -15,6 +16,7 @@ void print_help()
     "  disable | d                send gd\\r\\n\n"
     "  yaw | y <angle> <speed>    send relative yaw command yr\n"
     "  pitch | p <angle> <speed>  send relative pitch command pr\n"
+    "  status                     show axis state, age and raw status replies\n"
     "  help | h                   show this help\n"
     "  quit | q                   disable the gimbal and exit\n"
     "Angles are increments in degrees; speed is in degrees/second.\n";
@@ -47,7 +49,7 @@ int main(int argc, char * argv[])
     print_help();
 
     std::string line;
-    while (std::cout << "gimbal1> " && std::getline(std::cin, line)) {
+    while (std::cout << "gimbal1> " << std::flush && gimbal1_read_command(gimbal, line)) {
       std::istringstream input(line);
       std::string command;
       if (!(input >> command)) continue;
@@ -56,7 +58,7 @@ int main(int argc, char * argv[])
         if (command == "enable" || command == "e") {
           require_no_extra_input(input);
           gimbal.enable();
-          std::cout << "sent: ge\\r\\n (enabled)\n";
+          std::cout << "ge sent; motor execution belongs to A-board\n";
         } else if (command == "disable" || command == "d") {
           require_no_extra_input(input);
           gimbal.disable();
@@ -73,6 +75,11 @@ int main(int argc, char * argv[])
           read_motion_arguments(input, angle, speed);
           gimbal.move_relative_pitch(angle, speed);
           std::cout << "sent: pr " << angle << ' ' << speed << "\\r\\n\n";
+        } else if (command == "status") {
+          require_no_extra_input(input);
+          io::Gimbal1Feedback feedback;
+          gimbal.poll_feedback(feedback);
+          std::cout << gimbal.status_text() << '\n';
         } else if (command == "help" || command == "h") {
           require_no_extra_input(input);
           print_help();
@@ -89,7 +96,7 @@ int main(int argc, char * argv[])
       }
     }
 
-    std::cout << "\nInput closed; gd\\r\\n will be sent before closing the port.\n";
+    std::cout << "\nInput closed; closing serial only (no automatic gd).\n";
   } catch (const std::exception & e) {
     std::cerr << "gimbal1 startup failed: " << e.what() << '\n';
     return 1;
