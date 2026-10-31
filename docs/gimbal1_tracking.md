@@ -25,7 +25,7 @@ e 手动发送 ge；d 手动发送 gd；q 显式撤力并退出。输入结束�
 跟踪入口仍为 `build/ascii_tracking/gimbal1_armor_track`。推荐起始参数：
 
 ```bash
-cd /home/ros/infantry/ict27_infantry
+cd /home/ros/infantry/icd27_infantry
 ./build/ascii_tracking/gimbal1_armor_track configs/infantry_daheng.yaml \
   --control=true --control_rate=40 --speed=30 --max_step=1.0 \
   --yaw_gain=2.0 --pitch_gain=1.2 --deadband=10 --deadband_exit=16
@@ -71,8 +71,8 @@ cd /home/ros/infantry/ict27_infantry
 先停止已有服务，避免串口/相机占用：
 
 ```bash
-sudo systemctl stop ict27_armor_track.service
-cd /home/ros/infantry/ict27_infantry
+sudo systemctl stop icd27_armor_track.service
+cd /home/ros/infantry/icd27_infantry
 ./build/ascii_tracking/gimbal1_armor_track configs/infantry_daheng.yaml \
   --control=true --tracking=shadow --control_rate=50 --speed=60 --max_step=6.0 \
   --yaw_gain=4.0 --pitch_gain=2.5 --deadband=10 --deadband_exit=16

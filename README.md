@@ -1,8 +1,8 @@
-# ict27_infantry · 20261031
+# icd27_infantry · 20261031
 
 基于同济大学 SuperPower 战队 25 赛季开源项目的步兵视觉适配，当前硬件链路为 **大恒相机 → NUC → A 板 ASCII 串口 → 云台**。本分支整理截至 2026-10-31 的相机、串口、视觉跟随、单装甲板预测和运行维护工具。
 
-本地目录名为 `ict27_infantry`，GitHub 仓库名为 `icd27_infantry`，两者拼写不同。原项目介绍及理论见 [readme.md](readme.md)，历史适配记录见 [README_2610.md](README_2610.md)。历史文档中的旧路径、26 列反馈、`--gain` 和非零 `--min_step` 不适用于当前跟随入口。
+项目目录与 GitHub 仓库统一命名为 `icd27_infantry`。原项目介绍及理论见 [readme.md](readme.md)，历史适配记录见 [README_2610.md](README_2610.md)。历史文档中的旧路径、26 列反馈、`--gain` 和非零 `--min_step` 不适用于当前跟随入口。
 
 ## 相比“10 月前步兵”增加或调整了什么
 
@@ -17,7 +17,7 @@
 | 单装甲板模型 | 当前 ASCII 跟随入口未接入此链路 | 新增 PnP 位置解算、原项目 EKF 位置/速度估计、两轴 IMU 补偿、短时预测及速度前馈 |
 | 模式对照 | 像素跟随 | 新增 `pixel / shadow / predictive`；默认仍为 pixel，模型不可用时保留有效图像的像素基础跟随 |
 | 日志与回放 | 基础运行与串口日志 | 增加逐帧 `.vision.csv`、模型原因、角点/姿态/速度/发送参数，以及无相机、无串口的离线回放 |
-| 开机运行 | 旧识别服务、旧扫描服务 | 新增 `ict27_armor_track.service` 及安装脚本；安装时替换旧服务的开机职责 |
+| 开机运行 | 旧识别服务、旧扫描服务 | 新增 `icd27_armor_track.service` 及安装脚本；安装时替换旧服务的开机职责 |
 | 验证 | 原有协议测试 | 扩展协议测试，新增伪串口集成、姿态样本、视觉跟随、单板估计及信号停止测试 |
 
 当前 ASCII 跟随入口不调用弹道、自动开火或旧二进制电控接口；单装甲板模型也不是整车多装甲板旋转模型。预测目前按底座固定、roll 近似不变的两轴姿态补偿实现，相机外参、IMU 符号和时延仍需实体核对，离线通过不能证明实体跟随效果。
@@ -43,7 +43,7 @@
 大恒头文件默认从 `third_party/daheng_sdk/sdk_payload/Galaxy_camera` 查找，也可通过 `-DDAHENG_SDK_ROOT=/实际路径/Galaxy_camera` 指定；链接及运行还需能找到 `gxiapi` 动态库。项目的 `io` 库还链接海康、迈德威视 SDK，并非只安装大恒 SDK 就能完成所有依赖。
 
 ```bash
-cd /home/ros/infantry/ict27_infantry
+cd /home/ros/infantry/icd27_infantry
 cmake -S . -B build/ascii_tracking -DBUILD_TESTING=ON
 cmake --build build/ascii_tracking --target \
   gimbal1_armor_track gimbal1_test gimbal1_feedback gimbal1_feedback_monitor \
@@ -58,8 +58,8 @@ cmake --build build/ascii_tracking --target \
 先停止占用相机/串口的服务，再进行手动调试：
 
 ```bash
-sudo systemctl stop ict27_armor_track.service
-cd /home/ros/infantry/ict27_infantry
+sudo systemctl stop icd27_armor_track.service
+cd /home/ros/infantry/icd27_infantry
 
 # 只识别和显示，不打开串口
 ./build/ascii_tracking/gimbal1_armor_track configs/infantry_daheng.yaml
@@ -84,30 +84,30 @@ cd /home/ros/infantry/ict27_infantry
 | 文件 | 作用与当前适用性 |
 | --- | --- |
 | `install_armor_track_service.sh` | 安装并启用新服务；停止、禁用两个旧服务；不会立即启动新服务 |
-| `ict27_armor_track.service` | 新跟随服务，默认 pixel，`--control=true --auto_start=true`，失败后每 3 秒重启 |
+| `icd27_armor_track.service` | 新跟随服务，默认 pixel，`--control=true --auto_start=true`，失败后每 3 秒重启 |
 | `safe_debug_start.sh` / `autostart.sh` | 历史相机识别启动脚本，仍引用旧项目绝对路径和 `build/`，迁移前须修改 |
 | `install_gimbal_sweep_service.sh` | 历史扫描服务安装脚本，也保留旧绝对路径，不作为当前跟随安装入口 |
 | `sp_vision_safe_debug.service` | 旧相机识别开机任务 |
 | `sp_vision_gimbal_sweep.service` | 旧云台扫描开机任务 |
 | `99-sp-vision-gimbal.rules` | 串口设备命名规则，部署时核对设备匹配条件 |
 
-**当前服务文件与旧服务说明有差异：仓库中的 ExecStart 实际为 `--headless=false`。** 它会使用图像窗口，不能直接宣称“不依赖桌面登录”。若需无桌面运行，先把服务文件改为 `--headless=true`，再安装。服务和安装脚本固定使用用户 `ros`、目录 `/home/ros/infantry/ict27_infantry`；换机器时同步修改。
+**当前服务文件与旧服务说明有差异：仓库中的 ExecStart 实际为 `--headless=false`。** 它会使用图像窗口，不能直接宣称“不依赖桌面登录”。若需无桌面运行，先把服务文件改为 `--headless=true`，再安装。服务和安装脚本固定使用用户 `ros`、目录 `/home/ros/infantry/icd27_infantry`；换机器时同步修改。
 
 ```bash
 # 安装/更新：只启用下次开机，不立即运行
 sudo ./install_armor_track_service.sh
 
-systemctl is-enabled ict27_armor_track.service
-systemctl status ict27_armor_track.service --no-pager
-journalctl -u ict27_armor_track.service -b --no-pager
-journalctl -u ict27_armor_track.service -f
+systemctl is-enabled icd27_armor_track.service
+systemctl status icd27_armor_track.service --no-pager
+journalctl -u icd27_armor_track.service -b --no-pager
+journalctl -u icd27_armor_track.service -f
 
 # 手动停止 / 取消开机启动并停止
-sudo systemctl stop ict27_armor_track.service
-sudo systemctl disable --now ict27_armor_track.service
+sudo systemctl stop icd27_armor_track.service
+sudo systemctl disable --now icd27_armor_track.service
 ```
 
-安装完成后，如需立即运行，可执行 `sudo systemctl start ict27_armor_track.service`；该服务会在首张新鲜图像后请求使能。只有 `control/headless/auto_start` 同时为 true 时，程序收到 SIGTERM/SIGINT 才在关闭串口前发送一次 `gd`；因此当前 `headless=false` 的仓库服务不满足此条件。更多背景见 [服务说明](docs/gimbal1_systemd.md)，其中无窗口描述须以上述实际配置为准。
+安装完成后，如需立即运行，可执行 `sudo systemctl start icd27_armor_track.service`；该服务会在首张新鲜图像后请求使能。只有 `control/headless/auto_start` 同时为 true 时，程序收到 SIGTERM/SIGINT 才在关闭串口前发送一次 `gd`；因此当前 `headless=false` 的仓库服务不满足此条件。更多背景见 [服务说明](docs/gimbal1_systemd.md)，其中无窗口描述须以上述实际配置为准。
 
 ## 日志、离线测试与排查
 
@@ -136,7 +136,7 @@ pgrep -af 'gimbal1|camera_detect|capture_camera|sp_vision'
 以下命令适用于本地仍在 `202610_beford`、尚未创建本地 `20261031` 的状态：
 
 ```bash
-cd /home/ros/infantry/ict27_infantry
+cd /home/ros/infantry/icd27_infantry
 # 先确认远端，再取回分支信息；连接失败时先解决网络/登录
 git remote -v
 git fetch origin
@@ -163,3 +163,7 @@ git push -u origin 20261031
 ## 许可证
 
 沿用仓库 [LICENSE](LICENSE)，保留原项目及第三方组件的署名与许可文件。
+
+## 目录更名后的本机迁移
+
+若之前安装了旧名称服务，先执行 `sudo systemctl disable --now ict27_armor_track.service`，再安装新名称服务。仓库更名不会自动修改 `/etc/systemd/system/` 中已安装的服务。旧构建缓存含有原目录绝对路径，需重新生成；可先将 `build/ascii_tracking` 移到项目外备份，再按上文重新配置和编译。

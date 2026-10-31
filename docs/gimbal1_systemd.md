@@ -1,13 +1,13 @@
 # 开机自动识别并跟踪装甲板
 
-当前服务为 `ict27_armor_track.service`，运行用户ros，工作目录 `/home/ros/infantry/ict27_infantry`。不依赖桌面登录，不弹相机窗口。
+当前服务为 `icd27_armor_track.service`，运行用户ros，工作目录 `/home/ros/infantry/icd27_infantry`。不依赖桌面登录，不弹相机窗口。
 
 ## 安装
 
 程序已构建在 `build/ascii_tracking/gimbal1_armor_track`。运行：
 
 ```bash
-sudo /home/ros/infantry/ict27_infantry/install_armor_track_service.sh
+sudo /home/ros/infantry/icd27_infantry/install_armor_track_service.sh
 ```
 
 安装脚本验证服务配置、安装到 `/etc/systemd/system/`、停止并禁用旧的 `sp_vision_safe_debug.service` 和 `sp_vision_gimbal_sweep.service`，然后启用新服务。它不立即启动新服务，下次开机运行。重复安装不会创建第二份服务。
@@ -31,21 +31,21 @@ sudo /home/ros/infantry/ict27_infantry/install_armor_track_service.sh
 
 ```bash
 # 查看服务是否已启用、是否在运行
-systemctl is-enabled ict27_armor_track.service
-systemctl status ict27_armor_track.service --no-pager
+systemctl is-enabled icd27_armor_track.service
+systemctl status icd27_armor_track.service --no-pager
 
 # 立即启动（自动使能并跟踪）
-sudo systemctl start ict27_armor_track.service
+sudo systemctl start icd27_armor_track.service
 
 # 停止视觉服务
-sudo systemctl stop ict27_armor_track.service
+sudo systemctl stop icd27_armor_track.service
 
 # 取消开机启动并停止
-sudo systemctl disable --now ict27_armor_track.service
+sudo systemctl disable --now icd27_armor_track.service
 
 # 查看本次开机日志 / 实时日志
-journalctl -u ict27_armor_track.service -b --no-pager
-journalctl -u ict27_armor_track.service -f
+journalctl -u icd27_armor_track.service -b --no-pager
+journalctl -u icd27_armor_track.service -f
 ```
 
 SIGTERM/SIGINT会请求程序退出。服务模式（control/headless/auto_start同时为true）在关闭串口前发送一次gd，随后关闭相机和串口；因此 `systemctl stop` 会请求电控失能。这属于用户显式停止命令，不是运行中的保护或到位逻辑。目标丢失、反馈异常、正常EOF、普通运行错误都不触发这个停止命令。SIGKILL或断电无法执行进程清理，gd是否生效仍以A板反馈为准。手动窗口模式的d/q行为不变。开机启动设置不受stop影响。

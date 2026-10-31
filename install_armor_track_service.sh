@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ ${EUID} -ne 0 ]]; then
-  echo "Run: sudo /home/ros/infantry/ict27_infantry/install_armor_track_service.sh" >&2
+  echo "Run: sudo /home/ros/infantry/icd27_infantry/install_armor_track_service.sh" >&2
   exit 1
 fi
-project=/home/ros/infantry/ict27_infantry
-service=ict27_armor_track.service
+project=/home/ros/infantry/icd27_infantry
+service=icd27_armor_track.service
 [[ -x "$project/build/ascii_tracking/gimbal1_armor_track" ]]
 [[ -r "$project/configs/infantry_daheng.yaml" ]]
 /usr/bin/systemd-analyze verify "$project/$service"

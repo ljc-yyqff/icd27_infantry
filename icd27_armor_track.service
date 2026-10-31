@@ -1,0 +1,25 @@
+[Unit]
+Description=ICD27 armor detection and automatic gimbal tracking
+After=local-fs.target
+RequiresMountsFor=/home/ros/infantry/icd27_infantry
+Conflicts=sp_vision_safe_debug.service sp_vision_gimbal_sweep.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=ros
+SupplementaryGroups=dialout video plugdev
+WorkingDirectory=/home/ros/infantry/icd27_infantry
+ExecStartPre=/usr/bin/test -r /dev/gimbal
+ExecStartPre=/usr/bin/test -w /dev/gimbal
+ExecStart=/home/ros/infantry/icd27_infantry/build/ascii_tracking/gimbal1_armor_track configs/infantry_daheng.yaml --control=true --control_rate=50 --speed=30 --max_step=2.0 --yaw_gain=4.0 --pitch_gain=2.5 --deadband=10 --deadband_exit=16 --headless=false --auto_start=true
+Restart=always
+RestartSec=3
+KillSignal=SIGTERM
+TimeoutStopSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=icd27-armor-track
+
+[Install]
+WantedBy=multi-user.target
